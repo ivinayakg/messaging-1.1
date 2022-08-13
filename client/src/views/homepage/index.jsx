@@ -3,20 +3,23 @@ import { getFromStorage } from "../../services/localstorage";
 import Channel from "../components/channel";
 import Sidebar from "./sidebar";
 import classes from "./index.module.css";
-import createSocket from "../../services/createSocket";
+import axios from "../../services/api";
 import { useEffect } from "react";
 import { useQueryClient } from "react-query";
+import { createTokenHeader } from "../../services/utils";
 
 const Homepage = () => {
   const token = getFromStorage("token");
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    let socket = createSocket(token);
-
-    socket.onmessage = (event) => {
-      let messageDoc = JSON.parse(event.data);
-      queryClient.setQueriesData(
+    async function longPollingHandler() {
+      const res = await axios.get(
+        "/messages/polling",
+        createTokenHeader(getFromStorage("token"))
+      );
+      let messageDoc = res.data.data;
+      queryClient.setQueryData(
         `single-channel-${messageDoc.channelId}`,
         (data) => {
           return {
@@ -30,10 +33,12 @@ const Homepage = () => {
           };
         }
       );
-    };
+      longPollingHandler();
+    }
+    longPollingHandler();
 
-    return () => {
-      socket.close();
+    return async () => {
+      axios.get("/messages/unpoll", createTokenHeader(getFromStorage("token")));
     };
   }, []);
 

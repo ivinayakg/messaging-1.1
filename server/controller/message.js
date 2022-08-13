@@ -3,6 +3,7 @@ const Channel = require("../models/Channel");
 const Message = require("../models/Message");
 const { StatusCodes } = require("http-status-codes");
 const { CustomError } = require("../error");
+const { subscribe, requestQue, unSubscribe } = require("../utils/pubsub");
 
 const addMessage = async (req, res) => {
   const { _id: userId } = req.user;
@@ -74,4 +75,22 @@ const getAllUserMessages = async (req, res) => {
 
 // };
 
-module.exports = { getAllMessages, addMessage };
+const pollingForMessages = (req, res) => {
+  if (requestQue[req.user._id]) unSubscribe(req.user._id);
+  subscribe(req.user._id, res);
+  return;
+};
+const removePolling = (req, res) => {
+  if (requestQue[req.user._id]) unSubscribe(req.user._id);
+  return res
+    .status(StatusCodes.ACCEPTED)
+    .json({ success: true, message: "Request Deleted" });
+  return;
+};
+
+module.exports = {
+  getAllMessages,
+  addMessage,
+  pollingForMessages,
+  removePolling,
+};

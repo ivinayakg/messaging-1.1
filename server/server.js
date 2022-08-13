@@ -9,9 +9,7 @@ const helmet = require("helmet");
 const mongoSanitize = require("express-mongo-sanitize");
 const xss = require("xss-clean");
 const connect = require("./db");
-const { upgradeToSocket } = require("./socket");
-
-let allowlist = ["https://messagingv1.netlify.app/"];
+const newMessageEmitter = require("./utils/messageWatcher");
 
 app.use(
   cors({
@@ -29,18 +27,16 @@ app.use("/api", require("./routes"));
 app.get("/test", (req, res) => {
   return res.send("its working");
 });
-// app.use("/", express.static("./public"));
 
 const port = process.env.PORT || 8000;
 const server = app.listen(port, () =>
   console.log(`Your app is running at port ${port}`)
 );
 
-server.on("upgrade", upgradeToSocket);
-
 const start = async () => {
   try {
     await connect(process.env.MONGO_);
+    newMessageEmitter();
     console.log("\n\nServer is successfully connected\n");
   } catch (error) {
     console.log(error);
